@@ -8,27 +8,44 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}
     continue-on-error: ${{matrix.emacs_version == 'snapshot'}}
 
     strategy:
       matrix:
+        os: [ubuntu-latest]
         # Earliest supported + latest in each stable branch + snapshot.
-        emacs_version: ['25.1', '25.3', '26.3', '27.1', 'snapshot']
+        emacs_version: ['25.1', '25.3', '26.3', '27.1', '27.2', 'snapshot']
+        include:
+          - os: windows-latest
+            emacs_version: '27.2'
+
 
     steps:
     - name: Set up Emacs
+      if: "!startsWith (matrix.os, 'windows')"
       uses: purcell/setup-emacs@master
       with:
         version: ${{matrix.emacs_version}}
 
+    - name: Set up Emacs on Windows
+      if: startsWith (matrix.os, 'windows')
+      uses: jcs090218/setup-emacs-windows@master
+      with:
+        version: ${{matrix.emacs_version}}
+
     - name: Install Eldev
+      if: "!startsWith (matrix.os, 'windows')"
       run: curl -fsSL https://raw.github.com/doublep/eldev/master/webinstall/github-eldev | sh
+
+    - name: Install Eldev on Windows
+      if: startsWith (matrix.os, 'windows')
+      run: curl.exe -fsSL https://raw.github.com/doublep/eldev/master/webinstall/eldev.bat | cmd /Q
 
     - name: Check out the source code
       uses: actions/checkout@v2
 
     - name: Test the project
       run: |
-        eldev -p -dtT -C test --expect 100
-        eldev -dtT -C compile --warnings-as-errors
+        ~/.eldev/bin/eldev -p -dtT -C test --expect 100
+        ~/.eldev/bin/eldev -dtT -C compile --warnings-as-errors
